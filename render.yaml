@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: trustpay-platform
+    env: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /admin/login
+    disk:
+      name: trustpay-data
+      mountPath: /app/data
+      sizeGB: 1
