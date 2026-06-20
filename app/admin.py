@@ -48,6 +48,23 @@ def mini_app(request:Request, tid:int=0):
         'usdt_wallets':[m for m in db.payment_methods('USDT')]
     })
 
+
+@app.get('/kyc-app', response_class=HTMLResponse)
+def kyc_app(request:Request, tid:int=0):
+    return templates.TemplateResponse('kyc_app.html', {'request':request,'brand':settings.brand_name,'tid':tid})
+
+@app.post('/kyc-app/submit', response_class=HTMLResponse)
+async def kyc_app_submit(request:Request, telegram_id:int=Form(...), full_name:str=Form(...), phone:str=Form(...), address:str=Form(...), purpose:str=Form(...), details:str=Form(''), id_image:UploadFile=File(...), selfie_image:UploadFile=File(...)):
+    os.makedirs(settings.upload_dir, exist_ok=True)
+    db.ensure_user(telegram_id, '', full_name, None)
+    suffix=db.rand_no('KYCIMG')
+    id_path=os.path.join(settings.upload_dir, f"id_{telegram_id}_{suffix}_{id_image.filename}")
+    selfie_path=os.path.join(settings.upload_dir, f"selfie_{telegram_id}_{suffix}_{selfie_image.filename}")
+    with open(id_path,'wb') as f: f.write(await id_image.read())
+    with open(selfie_path,'wb') as f: f.write(await selfie_image.read())
+    no=db.create_kyc({'telegram_id':telegram_id,'full_name':full_name,'phone':phone,'address':address,'purpose':purpose,'details':details,'id_image':id_path,'selfie_image':selfie_path})
+    return templates.TemplateResponse('kyc_success.html', {'request':request,'brand':settings.brand_name,'request_no':no})
+
 @app.post('/app/deposit')
 async def app_deposit(tid:int=Form(...), amount:float=Form(...), currency:str=Form(...), platform:str=Form(''), destination:str=Form(''), payment_method_id:int=Form(...), proof:UploadFile=File(...)):
     os.makedirs(settings.upload_dir, exist_ok=True)

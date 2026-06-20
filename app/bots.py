@@ -31,8 +31,9 @@ def main_menu(active=False, tid=0):
     rows += [[KeyboardButton(text='🪪 توثيق الحساب')],[KeyboardButton(text='🎧 الدعم'), KeyboardButton(text='📞 واتساب')]]
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
 
-def kyc_start_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='🚀 بدء التوثيق', callback_data='kyc_start')]])
+def kyc_start_kb(tid:int=0):
+    url=f"{settings.public_base_url}/kyc-app?tid={tid}"
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='🚀 بدء التوثيق', web_app=WebAppInfo(url=url))]])
 
 def app_kb(tid:int):
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='📱 فتح لوحة الحساب', web_app=WebAppInfo(url=f"{settings.public_base_url}/app?tid={tid}"))]])
@@ -168,10 +169,12 @@ async def kyc_start_msg(m:Message):
     old=db.active_kyc(m.from_user.id)
     if old and old['status']=='قيد المراجعة': return await m.answer(f"لديك طلب قيد المراجعة: {old['request_no']}")
     if old and old['status']=='مقبول': return await m.answer('حسابك موثق بالفعل ✅')
-    await m.answer(f"مرحباً بك في بوت توثيق {settings.brand_name}! 👋\nيرجى الضغط على الزر أدناه لبدء عملية التوثيق.", reply_markup=kyc_start_kb())
+    await m.answer(f"مرحباً بك في بوت توثيق {settings.brand_name}! 👋\nيرجى الضغط على الزر أدناه لبدء عملية التوثيق.", reply_markup=kyc_start_kb(m.from_user.id))
 
 @kyc_dp.callback_query(F.data=='kyc_start')
-async def start_form(c, state:FSMContext): await state.set_state(KycForm.full_name); await c.message.answer('MetaBit KYC\nالمعلومات الشخصية\n\nأدخل الاسم الرباعي الكامل:'); await c.answer()
+async def start_form(c, state:FSMContext):
+    await c.message.answer('يرجى الضغط على زر بدء التوثيق لفتح صفحة التوثيق.')
+    await c.answer()
 @kyc_dp.message(KycForm.full_name)
 async def k_name(m,state): await state.update_data(full_name=m.text); await state.set_state(KycForm.phone); await m.answer('رقم الهاتف اليمني، مثال 7xxxxxxxx:')
 @kyc_dp.message(KycForm.phone)
