@@ -2,13 +2,39 @@ from fastapi import FastAPI, Request, Form, Depends, HTTPException, UploadFile, 
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-import secrets, os
+import secrets, os, re
+from PIL import Image
 from .config import settings
 from . import db
 
 app=FastAPI(title=f"{settings.brand_name} Admin")
 templates=Jinja2Templates(directory="app/templates")
 security=HTTPBasic()
+
+
+
+def _valid_yemeni_phone(phone: str) -> bool:
+    return bool(re.fullmatch(r"7\d{8}", (phone or "").strip()))
+
+def _valid_full_name(name: str) -> bool:
+    return len([x for x in (name or "").strip().split() if x]) >= 4
+
+def _validate_image_file(path: str) -> None:
+    try:
+        size = os.path.getsize(path)
+        with Image.open(path) as img:
+            w, h = img.size
+            fmt = (img.format or '').lower()
+        if size < 35000 or w < 480 or h < 360 or fmt not in {'jpeg','jpg','png','webp'}:
+            raise ValueError('bad image')
+    except Exception:
+        raise HTTPException(status_code=400, detail='الصورة غير واضحة أو ليست صورة صحيحة. يرجى الالتقاط من الكاميرا بإضاءة واضحة.')
+
+def _validate_common_order(amount: float, currency: str) -> None:
+    if amount <= 0 or amount > 100000:
+        raise HTTPException(status_code=400, detail='المبلغ غير صحيح.')
+    if currency not in {'USD','SAR'}:
+        raise HTTPException(status_code=400, detail='العملة غير صحيحة.')
 
 def auth(creds:HTTPBasicCredentials=Depends(security)):
     ok_user=secrets.compare_digest(creds.username, settings.admin_username)
@@ -55,29 +81,60 @@ def kyc_app(request:Request, tid:int=0):
 
 @app.post('/kyc-app/submit', response_class=HTMLResponse)
 async def kyc_app_submit(request:Request, telegram_id:int=Form(...), full_name:str=Form(...), phone:str=Form(...), address:str=Form(...), purpose:str=Form(...), details:str=Form(''), id_image:UploadFile=File(...), selfie_image:UploadFile=File(...)):
+    full_name=(full_name or '').strip(); phone=(phone or '').strip(); address=(address or '').strip(); details=(details or '').strip()
+    allowed_purposes={'الإيداع إلى منصة تداول','شراء منتجات أو خدمات','غرض شخصي'}
+    if telegram_id <= 0:
+        raise HTTPException(status_code=400, detail='يجب فتح صفحة التوثيق من داخل بوت Telegram.')
+    if not _valid_full_name(full_name):
+        raise HTTPException(status_code=400, detail='الاسم يجب أن يكون رباعياً على الأقل.')
+    if not _valid_yemeni_phone(phone):
+        raise HTTPException(status_code=400, detail='رقم الهاتف يجب أن يبدأ بـ 7 ويتكون من 9 أرقام.')
+    if len(address) < 12 or len(address.split()) < 3:
+        raise HTTPException(status_code=400, detail='العنوان ناقص. اكتب المحافظة والمدينة والحي أو أقرب معلم.')
+    if purpose not in allowed_purposes:
+        raise HTTPException(status_code=400, detail='الغرض غير صحيح.')
+    if purpose != 'غرض شخصي' and len(details) < 3:
+        raise HTTPException(status_code=400, detail='التفاصيل مطلوبة لهذا الغرض.')
+    if db.active_kyc(telegram_id):
+        raise HTTPException(status_code=409, detail='لديك طلب توثيق سابق قيد المراجعة أو مقبول.')
     os.makedirs(settings.upload_dir, exist_ok=True)
     db.ensure_user(telegram_id, '', full_name, None)
     suffix=db.rand_no('KYCIMG')
-    id_path=os.path.join(settings.upload_dir, f"id_{telegram_id}_{suffix}_{id_image.filename}")
-    selfie_path=os.path.join(settings.upload_dir, f"selfie_{telegram_id}_{suffix}_{selfie_image.filename}")
+    id_path=os.path.join(settings.upload_dir, f"id_{telegram_id}_{suffix}.jpg")
+    selfie_path=os.path.join(settings.upload_dir, f"selfie_{telegram_id}_{suffix}.jpg")
     with open(id_path,'wb') as f: f.write(await id_image.read())
     with open(selfie_path,'wb') as f: f.write(await selfie_image.read())
+    _validate_image_file(id_path); _validate_image_file(selfie_path)
     no=db.create_kyc({'telegram_id':telegram_id,'full_name':full_name,'phone':phone,'address':address,'purpose':purpose,'details':details,'id_image':id_path,'selfie_image':selfie_path})
     return templates.TemplateResponse('kyc_success.html', {'request':request,'brand':settings.brand_name,'request_no':no})
 
 @app.post('/app/deposit')
 async def app_deposit(tid:int=Form(...), amount:float=Form(...), currency:str=Form(...), platform:str=Form(''), destination:str=Form(''), payment_method_id:int=Form(...), proof:UploadFile=File(...)):
+    _validate_common_order(amount, currency)
+    platform=(platform or '').strip(); destination=(destination or '').strip()
+    if len(platform) < 2 or platform.upper() in {'USD','SAR','USDT'}:
+        raise HTTPException(status_code=400, detail='اكتب اسم منصة أو خدمة صحيح، مثل Binance أو Bybit أو OKX.')
+    if len(destination) < 4:
+        raise HTTPException(status_code=400, detail='اكتب عنوان المحفظة أو UID أو ملاحظات التحويل بوضوح.')
+    if not db.get_payment_method(payment_method_id, currency):
+        raise HTTPException(status_code=400, detail='طريقة الدفع غير صحيحة أو لا تطابق العملة المختارة.')
     os.makedirs(settings.upload_dir, exist_ok=True)
-    path=os.path.join(settings.upload_dir, f"dep_{tid}_{db.rand_no('P')}_{proof.filename}")
+    path=os.path.join(settings.upload_dir, f"dep_{tid}_{db.rand_no('P')}.jpg")
     with open(path,'wb') as f: f.write(await proof.read())
+    _validate_image_file(path)
     db.create_deposit(tid, amount, currency, platform, destination, payment_method_id, path)
     return RedirectResponse(f'/app?tid={tid}', status_code=303)
 
 @app.post('/app/withdraw')
 async def app_withdraw(tid:int=Form(...), amount:float=Form(...), currency:str=Form(...), local_receiver:str=Form(...), usdt_txid:str=Form(''), proof:UploadFile=File(...)):
+    _validate_common_order(amount, currency)
+    local_receiver=(local_receiver or '').strip()
+    if len(local_receiver) < 12 or len(local_receiver.split()) < 3:
+        raise HTTPException(status_code=400, detail='بيانات حساب الاستلام ناقصة. اكتب البنك، الاسم، رقم الحساب أو الهاتف.')
     os.makedirs(settings.upload_dir, exist_ok=True)
-    path=os.path.join(settings.upload_dir, f"wdr_{tid}_{db.rand_no('P')}_{proof.filename}")
+    path=os.path.join(settings.upload_dir, f"wdr_{tid}_{db.rand_no('P')}.jpg")
     with open(path,'wb') as f: f.write(await proof.read())
+    _validate_image_file(path)
     db.create_withdraw(tid, amount, currency, local_receiver, path, usdt_txid)
     return RedirectResponse(f'/app?tid={tid}', status_code=303)
 

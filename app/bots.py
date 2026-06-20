@@ -38,6 +38,23 @@ def kyc_start_kb(tid:int=0):
 def app_kb(tid:int):
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='📱 فتح لوحة الحساب', web_app=WebAppInfo(url=f"{settings.public_base_url}/app?tid={tid}"))]])
 
+def _clean(t): return (t or '').strip()
+def _valid_amount(text):
+    try:
+        amount=float(_clean(text).replace(',','.'))
+        if amount<=0 or amount>100000: return None
+        return amount
+    except Exception:
+        return None
+
+def _valid_platform(text):
+    v=_clean(text)
+    return len(v)>=2 and v.upper() not in {'USD','SAR','USDT'}
+
+def _valid_receiver(text):
+    v=_clean(text)
+    return len(v)>=12 and len(v.split())>=3
+
 async def notify_admins(text):
     for aid in settings.admin_id_list:
         try: await main_bot.send_message(aid, text)
@@ -93,8 +110,8 @@ async def dep(m:Message, state:FSMContext):
     await state.set_state(DepositForm.amount); await m.answer('أدخل مبلغ الإيداع USDT:')
 @main_dp.message(DepositForm.amount)
 async def dep_amount(m:Message, state:FSMContext):
-    try: amount=float(m.text.replace(',','.'))
-    except: return await m.answer('اكتب مبلغ صحيح.')
+    amount=_valid_amount(m.text)
+    if amount is None: return await m.answer('اكتب مبلغ USDT صحيح أكبر من 0. مثال: 100')
     await state.update_data(amount=amount); await state.set_state(DepositForm.currency)
     await m.answer('اختر العملة التي ستدفع بها:', reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='USD'),KeyboardButton(text='SAR')]], resize_keyboard=True, one_time_keyboard=True))
 @main_dp.message(DepositForm.currency)
@@ -103,10 +120,15 @@ async def dep_curr(m:Message, state:FSMContext):
     await state.update_data(currency=m.text); await state.set_state(DepositForm.platform); await m.answer('اكتب اسم المنصة أو الخدمة: Binance / Bybit / OKX / أخرى')
 @main_dp.message(DepositForm.platform)
 async def dep_platform(m:Message, state:FSMContext):
-    await state.update_data(platform=m.text); await state.set_state(DepositForm.destination); await m.answer('اكتب عنوان محفظتك أو UID أو ملاحظات التحويل:')
+    if not _valid_platform(m.text):
+        return await m.answer('اكتب اسم منصة أو خدمة صحيح، وليس عملة. مثال: Binance / Bybit / OKX')
+    await state.update_data(platform=_clean(m.text)); await state.set_state(DepositForm.destination); await m.answer('اكتب عنوان محفظتك أو UID أو ملاحظات التحويل:')
 @main_dp.message(DepositForm.destination)
 async def dep_dest(m:Message, state:FSMContext):
-    await state.update_data(destination=m.text); data=await state.get_data(); methods=db.payment_methods(data['currency'])
+    dest=_clean(m.text)
+    if len(dest)<4:
+        return await m.answer('اكتب عنوان المحفظة أو UID أو ملاحظات التحويل بشكل أوضح.')
+    await state.update_data(destination=dest); data=await state.get_data(); methods=db.payment_methods(data['currency'])
     if not methods: return await m.answer('لا توجد طرق دفع متاحة حالياً.')
     lines=['اختر طريقة الدفع بإرسال الرقم:']
     for x in methods: lines.append(f"{x['id']} - {x['name']} - {x['currency']}\nالاسم: {x['account_name']}\nالحساب/الهاتف: {x['account_number'] or x['phone']}\n{x['instructions']}")
@@ -114,7 +136,10 @@ async def dep_dest(m:Message, state:FSMContext):
 @main_dp.message(DepositForm.method)
 async def dep_method(m:Message, state:FSMContext):
     if not m.text.isdigit(): return await m.answer('أرسل رقم طريقة الدفع فقط.')
-    await state.update_data(payment_method_id=int(m.text)); await state.set_state(DepositForm.proof); await m.answer('بعد التحويل أرسل صورة إثبات التحويل.')
+    data=await state.get_data(); mid=int(m.text)
+    if not db.get_payment_method(mid, data.get('currency')):
+        return await m.answer('رقم طريقة الدفع غير صحيح أو لا يطابق العملة المختارة. أرسل رقم من القائمة فقط.')
+    await state.update_data(payment_method_id=mid); await state.set_state(DepositForm.proof); await m.answer('⚠️ بعد التحويل إلى الحساب الظاهر لك، أرسل صورة إثبات التحويل هنا. لن يتم تنفيذ الطلب بدون إثبات واضح.')
 @main_dp.message(DepositForm.proof, F.photo)
 async def dep_proof(m:Message, state:FSMContext):
     data=await state.get_data(); os.makedirs(settings.upload_dir, exist_ok=True)
@@ -134,8 +159,8 @@ async def wd(m:Message, state:FSMContext):
     await state.set_state(WithdrawForm.amount); await m.answer(txt+'أدخل مبلغ السحب USDT:')
 @main_dp.message(WithdrawForm.amount)
 async def wd_amount(m:Message, state:FSMContext):
-    try: amount=float(m.text.replace(',','.'))
-    except: return await m.answer('اكتب مبلغ صحيح.')
+    amount=_valid_amount(m.text)
+    if amount is None: return await m.answer('اكتب مبلغ USDT صحيح أكبر من 0. مثال: 100')
     await state.update_data(amount=amount); await state.set_state(WithdrawForm.currency)
     await m.answer('اختر العملة المحلية التي تريد الاستلام بها:', reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='USD'),KeyboardButton(text='SAR')]], resize_keyboard=True, one_time_keyboard=True))
 @main_dp.message(WithdrawForm.currency)
@@ -144,10 +169,12 @@ async def wd_curr(m:Message, state:FSMContext):
     await state.update_data(currency=m.text); await state.set_state(WithdrawForm.receiver); await m.answer('اكتب بيانات حسابك المحلي للاستلام: البنك، الاسم، رقم الحساب/الهاتف')
 @main_dp.message(WithdrawForm.receiver)
 async def wd_receiver(m:Message, state:FSMContext):
-    await state.update_data(local_receiver=m.text); await state.set_state(WithdrawForm.txid); await m.answer('أرسل TXID أو اكتب تخطي:')
+    if not _valid_receiver(m.text):
+        return await m.answer('بيانات الاستلام ناقصة. اكتب: اسم البنك/المحفظة، الاسم الكامل، رقم الحساب أو الهاتف.')
+    await state.update_data(local_receiver=_clean(m.text)); await state.set_state(WithdrawForm.txid); await m.answer('أرسل TXID أو اكتب تخطي:')
 @main_dp.message(WithdrawForm.txid)
 async def wd_txid(m:Message, state:FSMContext):
-    await state.update_data(usdt_txid='' if m.text=='تخطي' else m.text); await state.set_state(WithdrawForm.proof); await m.answer('أرسل صورة إثبات تحويل USDT:')
+    await state.update_data(usdt_txid='' if m.text=='تخطي' else _clean(m.text)); await state.set_state(WithdrawForm.proof); await m.answer('⚠️ أرسل صورة إثبات تحويل USDT واضحة. لن يتم تنفيذ الطلب بدون إثبات.')
 @main_dp.message(WithdrawForm.proof, F.photo)
 async def wd_proof(m:Message, state:FSMContext):
     data=await state.get_data(); os.makedirs(settings.upload_dir, exist_ok=True)
@@ -173,7 +200,7 @@ async def kyc_start_msg(m:Message):
 
 @kyc_dp.callback_query(F.data=='kyc_start')
 async def start_form(c, state:FSMContext):
-    await c.message.answer('يرجى الضغط على زر بدء التوثيق لفتح صفحة التوثيق.')
+    await c.message.answer('يرجى الضغط على زر بدء التوثيق لفتح صفحة التوثيق.', reply_markup=kyc_start_kb(c.from_user.id))
     await c.answer()
 @kyc_dp.message(KycForm.full_name)
 async def k_name(m,state): await state.update_data(full_name=m.text); await state.set_state(KycForm.phone); await m.answer('رقم الهاتف اليمني، مثال 7xxxxxxxx:')

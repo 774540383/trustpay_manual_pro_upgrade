@@ -369,3 +369,9 @@ def list_ops():
 
 def create_operation(tid:int, op_type:str, amount:float, network='', wallet='', proof=''):
     with conn() as c: c.execute("INSERT INTO operations(telegram_id,op_type,amount,network,wallet,proof,created_at) VALUES(?,?,?,?,?,?,?)",(tid,op_type,amount,network,wallet,proof,now()))
+
+def get_payment_method(mid:int, currency:str|None=None):
+    with conn() as c:
+        if currency:
+            return c.execute("SELECT * FROM payment_methods WHERE id=? AND currency=? AND is_active=1",(mid,currency)).fetchone()
+        return c.execute("SELECT * FROM payment_methods WHERE id=? AND is_active=1",(mid,)).fetchone()
