@@ -1,4 +1,24 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>{{brand}}</title><style>
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>{{brand}}</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+(function(){
+  try{
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if(!tg) return;
+    tg.ready();
+    tg.expand();
+    const params = new URLSearchParams(window.location.search);
+    const hasTid = params.get('tid');
+    const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+    if(!hasTid && user && user.id){
+      params.set('tid', user.id);
+      const next = window.location.pathname + '?' + params.toString() + (window.location.hash || '');
+      window.location.replace(next);
+    }
+  }catch(e){ console.log('Telegram WebApp init error', e); }
+})();
+</script>
+<style>
 :root{--bg:#07111f;--card:#0f172a;--line:#26344b;--txt:#e5e7eb;--mut:#94a3b8;--acc:#14b8a6;--gold:#f59e0b}*{box-sizing:border-box}body{font-family:Arial,Tahoma;background:linear-gradient(135deg,#03111f,#0f172a);color:var(--txt);margin:0}.wrap{max-width:1100px;margin:auto;padding:16px}.hero{padding:22px;border-radius:24px;background:linear-gradient(135deg,#0f766e,#0f172a);border:1px solid #2dd4bf55}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.card{background:rgba(15,23,42,.95);border:1px solid var(--line);border-radius:18px;padding:15px;margin:12px 0}.stat b{font-size:24px}.stat span{display:block;color:var(--mut);font-size:13px}.tabs a{display:inline-block;background:#122036;border:1px solid #26344b;border-radius:999px;padding:9px 12px;margin:4px;color:#fff;text-decoration:none}input,select,textarea,button{width:100%;border-radius:12px;border:1px solid #334155;background:#07111f;color:#fff;padding:12px;margin:6px 0;font-size:15px}input:focus,select:focus,textarea:focus{outline:0;border-color:var(--acc);box-shadow:0 0 0 3px #14b8a633}button{background:var(--acc);color:#001;border:0;font-weight:bold}.badge{padding:5px 9px;border-radius:999px;background:#334155}table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid var(--line);padding:8px;text-align:right}.mut{color:var(--mut)}@media(max-width:820px){.grid{grid-template-columns:1fr}.hide-sm{display:none}.wrap{padding:10px}.hero{border-radius:18px}.card{border-radius:16px;padding:12px}.tabs a{width:calc(50% - 10px);text-align:center}.tableWrap{overflow-x:auto}table{min-width:520px}}
 </style></head><body><div class="wrap">
 <div class="hero"><h1>{{brand}} Wallet</h1><p>لوحة حسابك المصغرة داخل Telegram</p>{% if not u %}<p class="mut">افتحها من زر البوت حتى يظهر حسابك تلقائياً.</p>{% else %}<p>مرحباً {{u.full_name or u.username or u.telegram_id}}</p>{% endif %}</div>
