@@ -6,8 +6,8 @@
 <form id="form" method="post" action="/kyc-app/submit" enctype="multipart/form-data">
 <input type="hidden" name="telegram_id" id="tid" value="{{ tid }}"><input type="hidden" name="id_capture_required" value="1"><input type="hidden" name="selfie_capture_required" value="1">
 <section data-page="1"><h3>المعلومات الشخصية</h3><label>الاسم الرباعي <span class="req">إجباري</span></label><input name="full_name" id="full_name" placeholder="مثال: علي محمد أحمد عبدالله" autocomplete="name" required><label>رقم الهاتف اليمني <span class="req">إجباري</span></label><input name="phone" id="phone" inputmode="numeric" pattern="7[0-9]{8}" maxlength="9" placeholder="7xxxxxxxx" required><label>عنوان السكن بالتفصيل <span class="req">إجباري</span></label><textarea name="address" id="address" placeholder="المحافظة - المدينة - الحي - أقرب معلم" required></textarea><label>الغرض من شراء USDT</label><select name="purpose" id="purpose" required><option value="الإيداع إلى منصة تداول">الإيداع إلى منصة تداول</option><option value="شراء منتجات أو خدمات">شراء منتجات أو خدمات</option><option value="غرض شخصي">غرض شخصي</option></select><label id="details_label">اسم منصة التداول</label><input name="details" id="details" placeholder="Binance / Bybit / OKX" required><p class="small">لن تستطيع الانتقال للخطوة التالية إذا كانت البيانات ناقصة أو غير منطقية.</p></section>
-<section data-page="2" class="hidden"><h3>صورة الهوية / الجواز</h3><p class="small">افتح الكاميرا وصوّر الجواز أو الهوية مباشرة. يجب أن تكون الصورة واضحة وغير مظلمة.</p><div class="cameraBox"><video id="id_video" class="video" playsinline autoplay muted></video><canvas id="id_canvas" class="hidden"></canvas><input type="file" name="id_image" id="id_image" accept="image/*" capture="environment" class="hidden" required><div class="camActions"><button type="button" class="btn ghost" onclick="startCam('id')">فتح الكاميرا</button><button type="button" class="btn primary" onclick="takePhoto('id')">التقاط صورة الهوية</button></div><img id="id_prev" class="preview hidden"><div id="id_quality" class="quality">لم يتم التقاط الصورة بعد.</div></div></section>
-<section data-page="3" class="hidden"><h3>الصورة الشخصية</h3><p class="small">التقط سيلفي مباشر من الكاميرا الأمامية. يجب أن يظهر الوجه بوضوح.</p><div class="cameraBox"><video id="selfie_video" class="video" playsinline autoplay muted></video><canvas id="selfie_canvas" class="hidden"></canvas><input type="file" name="selfie_image" id="selfie_image" accept="image/*" capture="user" class="hidden" required><div class="camActions"><button type="button" class="btn ghost" onclick="startCam('selfie')">فتح الكاميرا</button><button type="button" class="btn primary" onclick="takePhoto('selfie')">التقاط السيلفي</button></div><img id="selfie_prev" class="preview hidden"><div id="selfie_quality" class="quality">لم يتم التقاط الصورة بعد.</div></div></section>
+<section data-page="2" class="hidden"><h3>صورة الهوية / الجواز</h3><p class="small">افتح الكاميرا وصوّر الجواز أو الهوية مباشرة. يجب أن تكون الصورة واضحة وغير مظلمة.</p><div class="cameraBox"><video id="id_video" class="video" playsinline autoplay muted></video><canvas id="id_canvas" class="hidden"></canvas><input type="file" name="id_image" id="id_image" accept="image/*" capture="environment" class="hidden" required onchange="captureFromInput('id',this)"><div class="camActions"><button type="button" class="btn ghost" onclick="startCam('id')">فتح الكاميرا</button><button type="button" class="btn primary" onclick="takePhoto('id')">التقاط صورة الهوية</button></div><button type="button" class="btn primary" style="width:100%;margin-top:10px" onclick="openNativeCamera('id')">التقاط من كاميرا الجوال إذا لم تعمل الكاميرا</button><img id="id_prev" class="preview hidden"><div id="id_quality" class="quality">لم يتم التقاط الصورة بعد.</div></div></section>
+<section data-page="3" class="hidden"><h3>الصورة الشخصية</h3><p class="small">التقط سيلفي مباشر من الكاميرا الأمامية. يجب أن يظهر الوجه بوضوح.</p><div class="cameraBox"><video id="selfie_video" class="video" playsinline autoplay muted></video><canvas id="selfie_canvas" class="hidden"></canvas><input type="file" name="selfie_image" id="selfie_image" accept="image/*" capture="user" class="hidden" required onchange="captureFromInput('selfie',this)"><div class="camActions"><button type="button" class="btn ghost" onclick="startCam('selfie')">فتح الكاميرا</button><button type="button" class="btn primary" onclick="takePhoto('selfie')">التقاط السيلفي</button></div><button type="button" class="btn primary" style="width:100%;margin-top:10px" onclick="openNativeCamera('selfie')">التقاط من كاميرا الجوال إذا لم تعمل الكاميرا</button><img id="selfie_prev" class="preview hidden"><div id="selfie_quality" class="quality">لم يتم التقاط الصورة بعد.</div></div></section>
 <section data-page="4" class="hidden"><h3>مراجعة المعلومات</h3><div class="summary" id="summary"></div><h3>الشروط والأحكام</h3><div class="terms">1️⃣ أتعهد بأن جميع المعلومات والصور المقدمة صحيحة وحقيقية.<br>2️⃣ أوافق على استخدام بياناتي للتحقق من هويتي.<br>3️⃣ أفهم أن TrustPay لا يرتبط بأي شركات استثمارية أو منصات تداول أو تسويق هرمي.<br>4️⃣ جميع عمليات التحويل تتم بناءً على طلب المستخدم وتحت مسؤوليته.</div><label><input type="checkbox" id="agree" style="width:auto" required> أوافق على الشروط والأحكام</label></section>
 <div class="warn" id="err"></div><div class="row"><button type="button" class="btn ghost" id="prev">السابق</button><button type="button" class="btn primary" id="next">التالي</button><button type="submit" class="btn primary hidden" id="send">أوافق وأرسل</button></div></form></main></div></div>
 <script>
@@ -15,9 +15,58 @@ const tg=window.Telegram?.WebApp; tg?.ready(); tg?.expand(); const qs=new URLSea
 let page=1; const err=document.getElementById('err'); const streams={}; const captured={id:false,selfie:false}; function setErr(t){err.textContent=t;err.classList.add('show')}function clearErr(){err.textContent='';err.classList.remove('show')}function show(){document.querySelectorAll('section').forEach(s=>s.classList.toggle('hidden',s.dataset.page!=page));[1,2,3,4].forEach(i=>document.getElementById('s'+i).classList.toggle('on',i==page));prev.style.display=page==1?'none':'block';next.classList.toggle('hidden',page==4);send.classList.toggle('hidden',page!=4);clearErr(); if(page==2) startCam('id'); if(page==3) startCam('selfie'); if(page==4) fillSummary()}
 function words(v){return v.trim().split(/\s+/).filter(Boolean)}function val(){clearErr(); if(page==1){let name=full_name.value.trim().replace(/\s+/g,' '), ph=phone.value.trim(), addr=address.value.trim(), det=details.value.trim(); full_name.value=name; if(words(name).length<4) return setErr('الاسم يجب أن يكون رباعياً على الأقل.'),false; if(!/^7\d{8}$/.test(ph)) return setErr('رقم الهاتف يجب أن يكون 9 أرقام ويبدأ بـ 7.'),false; if(addr.length<12 || words(addr).length<3) return setErr('اكتب عنوان السكن بشكل أوضح: المحافظة، المدينة، الحي أو أقرب معلم.'),false; if(purpose.value!='غرض شخصي' && det.length<3) return setErr('اكتب التفاصيل المطلوبة: اسم المنصة أو الموقع.'),false; if(purpose.value=='الإيداع إلى منصة تداول' && !/^[\u0600-\u06FFa-zA-Z0-9 ._-]{3,40}$/.test(det)) return setErr('اسم المنصة غير صحيح. مثال: Binance أو Bybit أو OKX.'),false;} if(page==2&&!captured.id) return setErr('يجب التقاط صورة الهوية مباشرة من الكاميرا.'),false; if(page==3&&!captured.selfie) return setErr('يجب التقاط صورة سيلفي مباشرة من الكاميرا.'),false; return true}
 next.onclick=()=>{if(val()){page++;show()}};prev.onclick=()=>{page--;show()};purpose.onchange=()=>{if(purpose.value=='الإيداع إلى منصة تداول'){details_label.textContent='اسم منصة التداول';details.placeholder='Binance / Bybit / OKX';details.required=true}else if(purpose.value=='شراء منتجات أو خدمات'){details_label.textContent='اسم الموقع أو المتجر';details.placeholder='اسم الموقع أو المتجر';details.required=true}else{details_label.textContent='الغرض الشخصي اختياري';details.placeholder='اكتب الغرض الشخصي إن وجد';details.required=false}};
-async function startCam(kind){try{if(streams[kind]) return; const facing=kind=='selfie'?'user':'environment'; const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1280},height:{ideal:720}},audio:false}); streams[kind]=st; document.getElementById(kind+'_video').srcObject=st;}catch(e){setErr('لم يتم السماح بالكاميرا. افتح الصفحة داخل Telegram أو المتصفح واسمح باستخدام الكاميرا. لا يمكن المتابعة بدون التقاط مباشر.')}}
+function stopCam(kind){try{if(streams[kind]){streams[kind].getTracks().forEach(t=>t.stop()); streams[kind]=null; const v=document.getElementById(kind+'_video'); if(v) v.srcObject=null;}}catch(e){}}
+function stopOtherCam(kind){Object.keys(streams).forEach(k=>{if(k!==kind) stopCam(k)})}
+async function startCam(kind){
+  clearErr();
+  try{
+    stopOtherCam(kind);
+    if(streams[kind]) return;
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      openNativeCamera(kind); return;
+    }
+    const facing=kind=='selfie'?'user':'environment';
+    let constraints={video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}},audio:false};
+    try{
+      const st=await navigator.mediaDevices.getUserMedia(constraints);
+      streams[kind]=st; document.getElementById(kind+'_video').srcObject=st;
+    }catch(firstErr){
+      // بعض أجهزة أندرويد/تيليجرام تفشل عند تحديد الكاميرا، نجرب بدون facingMode
+      const st=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+      streams[kind]=st; document.getElementById(kind+'_video').srcObject=st;
+    }
+  }catch(e){
+    setErr('تعذر فتح الكاميرا المباشرة. اضغط زر التقاط من كاميرا الجوال واسمح للمتصفح بالكاميرا.');
+    openNativeCamera(kind);
+  }
+}
+function openNativeCamera(kind){
+  stopOtherCam(kind);
+  const inp=document.getElementById(kind+'_image');
+  inp.value='';
+  inp.click();
+}
 function dataURLtoFile(dataurl, filename){let arr=dataurl.split(','), mime=arr[0].match(/:(.*?);/)[1], bstr=atob(arr[1]), n=bstr.length, u8arr=new Uint8Array(n); while(n--)u8arr[n]=bstr.charCodeAt(n); return new File([u8arr], filename, {type:mime});}
-function takePhoto(kind){const video=document.getElementById(kind+'_video'), canvas=document.getElementById(kind+'_canvas'), inp=document.getElementById(kind+'_image'), img=document.getElementById(kind+'_prev'), q=document.getElementById(kind+'_quality'); if(!video.videoWidth){setErr('افتح الكاميرا أولاً ثم التقط الصورة.');return} canvas.width=video.videoWidth; canvas.height=video.videoHeight; canvas.getContext('2d').drawImage(video,0,0); if(canvas.width<480 || canvas.height<360){setErr('جودة الصورة منخفضة، أعد الالتقاط بإضاءة أوضح.');return} const url=canvas.toDataURL('image/jpeg',0.92); const file=dataURLtoFile(url, kind+'_'+Date.now()+'.jpg'); if(file.size<35000){setErr('الصورة غير واضحة أو حجمها صغير، أعد الالتقاط.');return} const dt=new DataTransfer(); dt.items.add(file); inp.files=dt.files; captured[kind]=true; img.src=url; img.classList.remove('hidden'); q.innerHTML='<span class="ok">تم التقاط الصورة بنجاح. الجودة مقبولة.</span>'; clearErr()}
+function captureFromInput(kind,input){
+  clearErr();
+  const file=input.files && input.files[0];
+  const img=document.getElementById(kind+'_prev'), q=document.getElementById(kind+'_quality');
+  if(!file){captured[kind]=false; return;}
+  if(!file.type.startsWith('image/')){setErr('الملف يجب أن يكون صورة.'); input.value=''; return;}
+  if(file.size<35000){setErr('الصورة صغيرة أو غير واضحة، أعد الالتقاط بإضاءة أفضل.'); input.value=''; return;}
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const im=new Image();
+    im.onload=()=>{
+      if(im.width<480 || im.height<360){setErr('جودة الصورة منخفضة. أعد الالتقاط بصورة أوضح.'); input.value=''; captured[kind]=false; return;}
+      img.src=reader.result; img.classList.remove('hidden'); captured[kind]=true;
+      q.innerHTML='<span class="ok">تم التقاط الصورة بنجاح. الجودة مقبولة.</span>';
+    };
+    im.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+function takePhoto(kind){const video=document.getElementById(kind+'_video'), canvas=document.getElementById(kind+'_canvas'), inp=document.getElementById(kind+'_image'), img=document.getElementById(kind+'_prev'), q=document.getElementById(kind+'_quality'); if(!video.videoWidth){openNativeCamera(kind);return} canvas.width=video.videoWidth; canvas.height=video.videoHeight; canvas.getContext('2d').drawImage(video,0,0); if(canvas.width<480 || canvas.height<360){setErr('جودة الصورة منخفضة، أعد الالتقاط بإضاءة أوضح.');return} const url=canvas.toDataURL('image/jpeg',0.92); const file=dataURLtoFile(url, kind+'_'+Date.now()+'.jpg'); if(file.size<35000){setErr('الصورة غير واضحة أو حجمها صغير، أعد الالتقاط.');return} const dt=new DataTransfer(); dt.items.add(file); inp.files=dt.files; captured[kind]=true; img.src=url; img.classList.remove('hidden'); q.innerHTML='<span class="ok">تم التقاط الصورة بنجاح. الجودة مقبولة.</span>'; clearErr(); stopCam(kind)}
 function fillSummary(){summary.innerHTML=`<b>الاسم الرباعي:</b> ${full_name.value}<br><b>رقم الهاتف:</b> ${phone.value}<br><b>العنوان:</b> ${address.value}<br><b>الغرض من شراء USDT:</b> ${purpose.value}<br><b>تفاصيل إضافية:</b> ${details.value||'لا يوجد'}<br><span class='pill'>صورة الهوية ملتقطة بالكاميرا</span><span class='pill'>الصورة الشخصية ملتقطة بالكاميرا</span>`}
 form.addEventListener('submit',e=>{if(!agree.checked){e.preventDefault();setErr('يجب الموافقة على الشروط والأحكام.')} if(!captured.id||!captured.selfie){e.preventDefault();setErr('يجب التقاط صورة الهوية والسيلفي من الكاميرا.')}});show();
 </script></body></html>
